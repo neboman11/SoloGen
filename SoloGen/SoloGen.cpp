@@ -16,8 +16,14 @@ int main()
 {
 	srand(time(NULL));
 	int fret = 0;
+	int tempo = 80;
+	char key = 'A';
+
+	cout << "Guitar Solo Generator for the Minor Pentatonic Scale, enter a tempo :";
+	cin >> tempo;
 	fret = (int)(((double)(rand()) / RAND_MAX) * 22);
 	cout << fret << endl;
+	outputTabBeat();
 	system("PAUSE");
 }
 
@@ -35,6 +41,7 @@ void outputTabBeat()
 			cout << fret;
 		else
 			cout << "-";
+		cout << endl;
 	}
 }
 
@@ -45,5 +52,5 @@ int randFret()
 
 int randString()
 {
-	return 0;
+	return (int)(((double)(rand()) / RAND_MAX) * 6);
 }
