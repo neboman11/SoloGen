@@ -11,6 +11,7 @@
 #include <mfapi.h>
 #include <Audioclient.h>
 #include <mmdeviceapi.h>
+#include <fstream>
 
 #define REFTIMES_PER_SEC 10000000
 #define REFTIMES_PER_MILLISEC 10000
@@ -26,7 +27,7 @@ const IID IID_MMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
 const IID IID_IAudioClient = __uuidof(IAudioClient);
 const IID IID_IAudioRenderClient = __uuidof(IAudioRenderClient);
 
-HRESULT PlayAudioStream(MyAudioSource *pMySource)
+HRESULT PlayAudioStream(int *pMySource)
 {
 	HRESULT hr;
 	REFERENCE_TIME hnsRequestedDuration = REFTIMES_PER_SEC;
@@ -35,7 +36,7 @@ HRESULT PlayAudioStream(MyAudioSource *pMySource)
 	IMMDevice *pDevice = NULL;
 	IAudioClient *pAudioClient = NULL;
 	IAudioRenderClient *pRenderClient = NULL;
-	WAVEFORMATX *pwfx = NULL;
+	WAVEFORMATEX *pwfx = NULL;
 	UINT32 bufferFrameCount;
 	UINT32 numFramesAvailable;
 	UINT32 numFramesPadding;
@@ -45,38 +46,38 @@ HRESULT PlayAudioStream(MyAudioSource *pMySource)
 	hr = CoCreateInstance(CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL, IID_IMMDeviceEnumerator, (void**)&pEnumerator);
 	EXIT_ON_ERROR(hr)
 
-		hr = pEnumerator->GetDefaultAudioEndpoint(eRender, eConsole, &pDevice);
+	hr = pEnumerator->GetDefaultAudioEndpoint(eRender, eConsole, &pDevice);
 	EXIT_ON_ERROR(hr)
 
-		hr = pDevice->Activate(IID_IAudioClient, CLSCTX_ALL, NULL, (void**)&pAudioClient);
+	hr = pDevice->Activate(IID_IAudioClient, CLSCTX_ALL, NULL, (void**)&pAudioClient);
 	EXIT_ON_ERROR(hr)
 
-		hr = pAudioClient->GetMixFormat(&pwfx);
+	hr = pAudioClient->GetMixFormat(&pwfx);
 	EXIT_ON_ERROR(hr)
 
-		hr = pAudioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, 0, hnsRequestedDuration, 0, pwfx, NULL);
+	hr = pAudioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, 0, hnsRequestedDuration, 0, pwfx, NULL);
 	EXIT_ON_ERROR(hr)
 
-		// Tell the audio source which format to use
-		hr = pMySource->SetFormat(pwfx);
+	// Tell the audio source which format to use
+	hr = pMySource->SetFormat(pwfx);
 	EXIT_ON_ERROR(hr)
 
-		// Get the actual size of the allocated buffer
-		hr = pAudioClient->GetBufferSize(&bufferFrameCount);
+	// Get the actual size of the allocated buffer
+	hr = pAudioClient->GetBufferSize(&bufferFrameCount);
 	EXIT_ON_ERROR(hr)
 
-		hr = pAudioClient->GetService(IID_IAudioRenderClient, (void**)&pRenderClient);
+	hr = pAudioClient->GetService(IID_IAudioRenderClient, (void**)&pRenderClient);
 	EXIT_ON_ERROR(hr)
 
-		//Grab the entire buffer for the initial fill operation
-		hr = pMySource->LoadData(bufferFrameCount, pData, &flags);
+	//Grab the entire buffer for the initial fill operation
+	hr = pMySource->LoadData(bufferFrameCount, pData, &flags);
 	EXIT_ON_ERROR(hr)
 
-		hr = pRenderClient->ReleaseBuffer(bufferFrameCount, flags);
+	hr = pRenderClient->ReleaseBuffer(bufferFrameCount, flags);
 	EXIT_ON_ERROR(hr)
 
-		//Calculate the actual duration of the allocated buffer
-		hnsActualDuration = (double)REFTIMES_PER_SEC * bufferFrameCount / pwfx->nSamplesPerSec;
+	//Calculate the actual duration of the allocated buffer
+	hnsActualDuration = (double)REFTIMES_PER_SEC * bufferFrameCount / pwfx->nSamplesPerSec;
 
 	hr = pAudioClient->Start();	// Start playing
 	EXIT_ON_ERROR(hr)
@@ -91,19 +92,38 @@ HRESULT PlayAudioStream(MyAudioSource *pMySource)
 			hr = pAudioClient->GetCurrentPadding(&numFramesPadding);
 			EXIT_ON_ERROR(hr)
 
-				numFramesAvailable = bufferFrameCount - numFramesPadding;
+			numFramesAvailable = bufferFrameCount - numFramesPadding;
 
 			// Grab all the available space in the shared buffer
 			hr = pRenderClient->GetBuffer(numFramesAvailable, &pData);
 			EXIT_ON_ERROR(hr)
 
-				// Get next 1/2-second of data from the audio source
-				hr = pMySource->LoadData(numFramesAvailable, flags);
+			// Get next 1/2-second of data from the audio source
+			hr = pMySource->LoadData(numFramesAvailable, flags);
+			EXIT_ON_ERROR(hr)
+			hr = pRenderClient->ReleaseBuffer(numFramesAvailable, flags);
 			EXIT_ON_ERROR(hr)
 		}
+
+	// Wait for last data in buffer to play before stopping
+	Sleep((DWORD)(hnsActualDuration / REFTIMES_PER_MILLISEC / 2));
+
+	hr = pAudioClient->Stop();	// Stop playing
+	EXIT_ON_ERROR(hr)
+
+	Exit:
+		CoTaskMemFree(pwfx);
+		SAFE_RELEASE(pEnumerator)
+			SAFE_RELEASE(pDevice)
+			SAFE_RELEASE(pAudioClient)
+			SAFE_RELEASE(pRenderClient)
+
+			return hr;
 }
 
 using namespace std;
+using std::string;
+using std::fstream;
 
 void outputTabChrom(int numBeats);
 void outputTabPenta(int numBeats);
