@@ -114,16 +114,32 @@ HRESULT PlayAudioStream(int *pMySource)
 	Exit:
 		CoTaskMemFree(pwfx);
 		SAFE_RELEASE(pEnumerator)
-			SAFE_RELEASE(pDevice)
-			SAFE_RELEASE(pAudioClient)
-			SAFE_RELEASE(pRenderClient)
+		SAFE_RELEASE(pDevice)
+		SAFE_RELEASE(pAudioClient)
+		SAFE_RELEASE(pRenderClient)
 
-			return hr;
+	return hr;
 }
 
 using namespace std;
 using std::string;
 using std::fstream;
+
+typedef struct WAV_HEADER {
+	char			RIFF[4];		// RIFF Header
+	unsigned long	ChunkSize;		// RIFF Chuck Size
+	char			WAVE[4];		// WAVE Header
+	char			fmt[4];			// FMT Header
+	unsigned long	Subchunk1Size;	// Size of the fmt chunk
+	unsigned short	AudioFormat;	// Audio format 1=PCM, 6=Mu-Law, 7=A-Law, 257=IBM Mu-Law, 258=IBM A-Law, 259=ADPCM
+	unsigned short	NumOfChan;		// Number of channels 1=Mono 2=Stereo
+	unsigned long	SamplesPerSec;	// Sampling Frequency in Hz
+	unsigned long	bytesPerSec;	// bytes per second
+	unsigned short	blockAlign;		// 2=16-bit mono, 4=16-bit stereo
+	unsigned short	bitsPerSample;	// Number of bits per sample
+	char			Subchunk2ID[4];	// "data" string
+	unsigned long	Subchunk2Size;	// Sampled data length
+}wav_hdr;
 
 void outputTabChrom(int numBeats);
 void outputTabPenta(int numBeats);
@@ -134,13 +150,42 @@ int randNoteLength();
 vector<int*> genRandNotes(int numBeats);
 vector<int*> genRandNotesPos(int numBeats);
 int* convPosToNote(int pos);
+int getFileSize(FILE *inFile);
 
-int main()
+int main(int argc, char* argv[])
 {
+	wav_hdr wavHeader;
+	FILE *wavFile;
+	int headerSize = sizeof(wav_hdr), filelength = 0;
+	string answer;
 	srand(time(NULL));	// Set rand() seed to current time to give pseudorandom effect
 	int tempo = 80;		// Desired output tempo
 	char key = 'A';		// Key used for generating PentaScale
 	int numBeats = 0;	// Total number of beats to generate for
+
+	do
+	{
+		string input;
+		string answer;
+
+		const char* filePath;
+
+		cout << "Pick wave file from the Windows Media File: ";
+		cin >> input;
+		cin.get();
+
+		cout << endl;
+
+		path = "C:\\Windows\\Media\\" + input + ".wav";
+		filePath = path.c_str();
+
+		wavFile = fopen(filePath, "r");
+
+		if (wavFile == NULL)
+		{
+			printf
+		}
+	}
 
 	cout << "Guitar Solo Generator for the Minor Pentatonic Scale, enter the number of beats: ";
 	cin >> numBeats;
@@ -403,4 +448,9 @@ int * convPosToNote(int pos)
 	else if (pos == 30)
 		return new int[2] {12, 5};
 	return nullptr;
+}
+
+int getFileSize(FILE * inFile)
+{
+	return 0;
 }
