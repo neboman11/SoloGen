@@ -110,6 +110,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;libsndfile-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -151,134 +152,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="libsndfile\ALAC\aglib.h" />
-    <ClInclude Include="libsndfile\ALAC\ALACAudioTypes.h" />
-    <ClInclude Include="libsndfile\ALAC\ALACBitUtilities.h" />
-    <ClInclude Include="libsndfile\ALAC\alac_codec.h" />
-    <ClInclude Include="libsndfile\ALAC\dplib.h" />
-    <ClInclude Include="libsndfile\ALAC\EndianPortable.h" />
-    <ClInclude Include="libsndfile\ALAC\matrixlib.h" />
-    <ClInclude Include="libsndfile\ALAC\shift.h" />
-    <ClInclude Include="libsndfile\chanmap.h" />
-    <ClInclude Include="libsndfile\common.h" />
-    <ClInclude Include="libsndfile\G72x\g72x.h" />
-    <ClInclude Include="libsndfile\G72x\g72x_priv.h" />
-    <ClInclude Include="libsndfile\GSM610\config.h" />
-    <ClInclude Include="libsndfile\GSM610\gsm.h" />
-    <ClInclude Include="libsndfile\GSM610\gsm610_priv.h" />
-    <ClInclude Include="libsndfile\ima_oki_adpcm.h" />
-    <ClInclude Include="libsndfile\ogg.h" />
-    <ClInclude Include="libsndfile\sfconfig.h" />
-    <ClInclude Include="libsndfile\sfendian.h" />
-    <ClInclude Include="libsndfile\sf_unistd.h" />
-    <ClInclude Include="libsndfile\sndfile.h" />
-    <ClInclude Include="libsndfile\sndfile.hh" />
-    <ClInclude Include="libsndfile\test_main.h" />
-    <ClInclude Include="libsndfile\wavlike.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="libsndfile\aiff.c" />
-    <ClCompile Include="libsndfile\alac.c" />
-    <ClCompile Include="libsndfile\ALAC\ag_dec.c" />
-    <ClCompile Include="libsndfile\ALAC\ag_enc.c" />
-    <ClCompile Include="libsndfile\ALAC\ALACBitUtilities.c" />
-    <ClCompile Include="libsndfile\ALAC\alac_decoder.c" />
-    <ClCompile Include="libsndfile\ALAC\alac_encoder.c" />
-    <ClCompile Include="libsndfile\ALAC\dp_dec.c" />
-    <ClCompile Include="libsndfile\ALAC\dp_enc.c" />
-    <ClCompile Include="libsndfile\ALAC\matrix_dec.c" />
-    <ClCompile Include="libsndfile\ALAC\matrix_enc.c" />
-    <ClCompile Include="libsndfile\alaw.c" />
-    <ClCompile Include="libsndfile\au.c" />
-    <ClCompile Include="libsndfile\audio_detect.c" />
-    <ClCompile Include="libsndfile\avr.c" />
-    <ClCompile Include="libsndfile\broadcast.c" />
-    <ClCompile Include="libsndfile\caf.c" />
-    <ClCompile Include="libsndfile\cart.c" />
-    <ClCompile Include="libsndfile\chanmap.c" />
-    <ClCompile Include="libsndfile\chunk.c" />
-    <ClCompile Include="libsndfile\command.c" />
-    <ClCompile Include="libsndfile\common.c" />
-    <ClCompile Include="libsndfile\dither.c" />
-    <ClCompile Include="libsndfile\double64.c" />
-    <ClCompile Include="libsndfile\dwd.c" />
-    <ClCompile Include="libsndfile\dwvw.c" />
-    <ClCompile Include="libsndfile\file_io.c" />
-    <ClCompile Include="libsndfile\flac.c" />
-    <ClCompile Include="libsndfile\float32.c" />
-    <ClCompile Include="libsndfile\g72x.c" />
-    <ClCompile Include="libsndfile\G72x\g721.c" />
-    <ClCompile Include="libsndfile\G72x\g723_16.c" />
-    <ClCompile Include="libsndfile\G72x\g723_24.c" />
-    <ClCompile Include="libsndfile\G72x\g723_40.c" />
-    <ClCompile Include="libsndfile\G72x\g72x.c" />
-    <ClCompile Include="libsndfile\G72x\g72x_test.c" />
-    <ClCompile Include="libsndfile\gsm610.c" />
-    <ClCompile Include="libsndfile\GSM610\add.c" />
-    <ClCompile Include="libsndfile\GSM610\code.c" />
-    <ClCompile Include="libsndfile\GSM610\decode.c" />
-    <ClCompile Include="libsndfile\GSM610\gsm_create.c" />
-    <ClCompile Include="libsndfile\GSM610\gsm_decode.c" />
-    <ClCompile Include="libsndfile\GSM610\gsm_destroy.c" />
-    <ClCompile Include="libsndfile\GSM610\gsm_encode.c" />
-    <ClCompile Include="libsndfile\GSM610\gsm_option.c" />
-    <ClCompile Include="libsndfile\GSM610\long_term.c" />
-    <ClCompile Include="libsndfile\GSM610\lpc.c" />
-    <ClCompile Include="libsndfile\GSM610\preprocess.c" />
-    <ClCompile Include="libsndfile\GSM610\rpe.c" />
-    <ClCompile Include="libsndfile\GSM610\short_term.c" />
-    <ClCompile Include="libsndfile\GSM610\table.c" />
-    <ClCompile Include="libsndfile\htk.c" />
-    <ClCompile Include="libsndfile\id3.c" />
-    <ClCompile Include="libsndfile\ima_adpcm.c" />
-    <ClCompile Include="libsndfile\ima_oki_adpcm.c" />
-    <ClCompile Include="libsndfile\interleave.c" />
-    <ClCompile Include="libsndfile\ircam.c" />
-    <ClCompile Include="libsndfile\macos.c" />
-    <ClCompile Include="libsndfile\mat4.c" />
-    <ClCompile Include="libsndfile\mat5.c" />
-    <ClCompile Include="libsndfile\mpc2k.c" />
-    <ClCompile Include="libsndfile\ms_adpcm.c" />
-    <ClCompile Include="libsndfile\nist.c" />
-    <ClCompile Include="libsndfile\ogg.c" />
-    <ClCompile Include="libsndfile\ogg_opus.c" />
-    <ClCompile Include="libsndfile\ogg_pcm.c" />
-    <ClCompile Include="libsndfile\ogg_speex.c" />
-    <ClCompile Include="libsndfile\ogg_vorbis.c" />
-    <ClCompile Include="libsndfile\paf.c" />
-    <ClCompile Include="libsndfile\pcm.c" />
-    <ClCompile Include="libsndfile\pvf.c" />
-    <ClCompile Include="libsndfile\raw.c" />
-    <ClCompile Include="libsndfile\rf64.c" />
-    <ClCompile Include="libsndfile\rx2.c" />
-    <ClCompile Include="libsndfile\sd2.c" />
-    <ClCompile Include="libsndfile\sds.c" />
-    <ClCompile Include="libsndfile\sndfile.c" />
-    <ClCompile Include="libsndfile\strings.c" />
-    <ClCompile Include="libsndfile\svx.c" />
-    <ClCompile Include="libsndfile\test_audio_detect.c" />
-    <ClCompile Include="libsndfile\test_binheader_writef.c" />
-    <ClCompile Include="libsndfile\test_broadcast_var.c" />
-    <ClCompile Include="libsndfile\test_cart_var.c" />
-    <ClCompile Include="libsndfile\test_conversions.c" />
-    <ClCompile Include="libsndfile\test_endswap.c" />
-    <ClCompile Include="libsndfile\test_file_io.c" />
-    <ClCompile Include="libsndfile\test_float.c" />
-    <ClCompile Include="libsndfile\test_ima_oki_adpcm.c" />
-    <ClCompile Include="libsndfile\test_log_printf.c" />
-    <ClCompile Include="libsndfile\test_main.c" />
-    <ClCompile Include="libsndfile\test_strncpy_crlf.c" />
-    <ClCompile Include="libsndfile\txw.c" />
-    <ClCompile Include="libsndfile\ulaw.c" />
-    <ClCompile Include="libsndfile\voc.c" />
-    <ClCompile Include="libsndfile\vox_adpcm.c" />
-    <ClCompile Include="libsndfile\w64.c" />
-    <ClCompile Include="libsndfile\wav.c" />
-    <ClCompile Include="libsndfile\wavlike.c" />
-    <ClCompile Include="libsndfile\windows.c" />
-    <ClCompile Include="libsndfile\wve.c" />
-    <ClCompile Include="libsndfile\xi.c" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -288,11 +164,7 @@
     <ClCompile Include="SoloGen.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="libsndfile\libsndfile-1.def" />
-    <None Include="libsndfile\test_endswap.def" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="libsndfile\version-metadata.rc" />
+    <Library Include="libsndfile-1.lib" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

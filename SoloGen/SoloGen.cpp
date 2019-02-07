@@ -12,8 +12,7 @@
 //#include <Audioclient.h>
 //#include <mmdeviceapi.h>
 #include <fstream>
-#include "libsndfile/sndfile.hh"
-#include <libsndfile>
+
 
 //#define REFTIMES_PER_SEC 10000000
 //#define REFTIMES_PER_MILLISEC 10000
