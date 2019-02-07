@@ -7,25 +7,27 @@
 #include <time.h>
 #include <string>
 #include <vector>
-#include <Windows.h>
-#include <mfapi.h>
-#include <Audioclient.h>
-#include <mmdeviceapi.h>
+//#include <Windows.h>
+//#include <mfapi.h>
+//#include <Audioclient.h>
+//#include <mmdeviceapi.h>
 #include <fstream>
+#include "libsndfile/sndfile.hh"
+#include <libsndfile>
 
-#define REFTIMES_PER_SEC 10000000
-#define REFTIMES_PER_MILLISEC 10000
+//#define REFTIMES_PER_SEC 10000000
+//#define REFTIMES_PER_MILLISEC 10000
+//
+//#define EXIT_ON_ERROR(hres) \
+//	if (FAILED(hres)) { goto Exit; }
+//#define SAFE_RELEASE(punk) \
+//	if ((punk) != NULL) \
+//		{ (punk)->Release(); (punk) = NULL; }
 
-#define EXIT_ON_ERROR(hres) \
-	if (FAILED(hres)) { goto Exit; }
-#define SAFE_RELEASE(punk) \
-	if ((punk) != NULL) \
-		{ (punk)->Release(); (punk) = NULL; }
-
-const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
-const IID IID_MMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
-const IID IID_IAudioClient = __uuidof(IAudioClient);
-const IID IID_IAudioRenderClient = __uuidof(IAudioRenderClient);
+//const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
+//const IID IID_MMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
+//const IID IID_IAudioClient = __uuidof(IAudioClient);
+//const IID IID_IAudioRenderClient = __uuidof(IAudioRenderClient);
 
 //HRESULT PlayAudioStream(int *pMySource)
 //{
@@ -126,12 +128,10 @@ using std::string;
 using std::fstream;
 
 typedef struct WAV_HEADER {
-	char			RIFFChunk[12];	// RIFF Chunk of header
 	char			ChunkID[4];		// RIFF Header
-	unsigned int	ChunkSize;		// RIFF Chuck Size
+	unsigned long	ChunkSize;		// RIFF Chuck Size
 	char			format[4];		// Format Header
-	char			FMTChunk[24];	// FMT Chunk of header
-	unsigned int	Subchunk1ID;	// ID of the fmt chunk
+	char			Subchunk1ID[4];	// ID of the fmt chunk
 	unsigned long	Subchunk1Size;	// Size of the fmt chunk
 	unsigned short	AudioFormat;	// Audio format 1=PCM, 6=Mu-Law, 7=A-Law, 257=IBM Mu-Law, 258=IBM A-Law, 259=ADPCM
 	unsigned short	NumOfChan;		// Number of channels 1=Mono 2=Stereo
@@ -139,7 +139,6 @@ typedef struct WAV_HEADER {
 	unsigned long	bytesPerSec;	// bytes per second
 	unsigned short	blockAlign;		// 2=16-bit mono, 4=16-bit stereo
 	unsigned short	bitsPerSample;	// Number of bits per sample
-	char			dataChunk[8];	// Data chunk of header
 	char			Subchunk2ID[4];	// "data" string
 	unsigned long	Subchunk2Size;	// Sampled data length
 }wav_hdr;
@@ -157,8 +156,7 @@ int getFileSize(FILE *inFile);
 
 int main(int argc, char* argv[])
 {
-	wav_hdr wavHeader;
-	FILE *wavFile;
+	//wav_hdr wavHeader;
 	int headerSize = sizeof(wav_hdr), filelength = 0;
 	string answer;
 	ifstream wavFileIn;
@@ -167,83 +165,77 @@ int main(int argc, char* argv[])
 	char key = 'A';		// Key used for generating PentaScale
 	int numBeats = 0;	// Total number of beats to generate for
 
-	do
-	{
-		string input;
-		string answer;
+	//do
+	//{
+	//	string input;
+	//	string answer;
 
-		const char* filePath;
+	//	const char* filePath;
 
-		cout << "Pick wave file from the Windows Media File: ";
-		cin >> input;
-		cin.get();
+	//	cout << "Pick wave file from the Windows Media File: ";
+	//	cin >> input;
+	//	cin.get();
 
-		cout << endl;
+	//	cout << endl;
 
-		string path = "C:\\Windows\\Media\\" + input + ".wav";
-		filePath = path.c_str();
+	//	string path = "C:\\Windows\\Media\\" + input + ".wav";
+	//	filePath = path.c_str();
 
-		wavFileIn.open(path);
+	//	wavFileIn.open(path);
 
-		if (!wavFileIn)
-		{
-			printf("Can not able to open wave file\n");
-			exit(EXIT_FAILURE);
-		}
+	//	if (!wavFileIn)
+	//	{
+	//		printf("Can not able to open wave file\n");
+	//		exit(EXIT_FAILURE);
+	//	}
 
-		wavFileIn.read(wavHeader.RIFFChunk, 12);
-		wavHeader.ChunkID[0] = wavHeader.RIFFChunk[0];
-		wavHeader.ChunkID[1] = wavHeader.RIFFChunk[1];
-		wavHeader.ChunkID[2] = wavHeader.RIFFChunk[2];
-		wavHeader.ChunkID[3] = wavHeader.RIFFChunk[3];
-		wavHeader.ChunkSize = wavHeader.RIFFChunk[4];
-		wavHeader.format[0] = wavHeader.RIFFChunk[8];
-		wavHeader.format[1] = wavHeader.RIFFChunk[9];
-		wavHeader.format[2] = wavHeader.RIFFChunk[10];
-		wavHeader.format[3] = wavHeader.RIFFChunk[11];
-		wavFileIn.read(wavHeader.FMTChunk, 24);
-		wavHeader.Subchunk1ID = wavHeader.FMTChunk[0];
-		wavHeader.Subchunk1Size = wavHeader.FMTChunk[4];
-		wavHeader.AudioFormat = wavHeader.FMTChunk[8];
-		wavHeader.NumOfChan = wavHeader.FMTChunk[10];
-		wavHeader.SamplesPerSec = wavHeader.FMTChunk[12];
-		wavHeader.bytesPerSec = wavHeader.FMTChunk[16];
-		wavHeader.blockAlign = wavHeader.FMTChunk[20];
-		wavHeader.bitsPerSample = wavHeader.FMTChunk[22];
-		wavFileIn.read(wavHeader.dataChunk, 8);
-		wavHeader.Subchunk2ID[0] = wavHeader.dataChunk[0];
-		wavHeader.Subchunk2ID[1] = wavHeader.dataChunk[1];
-		wavHeader.Subchunk2ID[2] = wavHeader.dataChunk[2];
-		wavHeader.Subchunk2ID[3] = wavHeader.dataChunk[3];
-		wavHeader.Subchunk2Size = wavHeader.dataChunk[4];
+	//	wavFileIn.read(wavHeader.ChunkID, 4);
+	//	wavFileIn.read(reinterpret_cast<char *>(&wavHeader.ChunkSize), 4);
+	//	wavFileIn.read(wavHeader.format, 4);
+	//	wavFileIn.read(wavHeader.Subchunk1ID, 4);
+	//	wavFileIn.read(reinterpret_cast<char *>(&wavHeader.Subchunk1Size), 4);
+	//	wavFileIn.read(reinterpret_cast<char *>(&wavHeader.AudioFormat), 2);
+	//	wavFileIn.read(reinterpret_cast<char *>(&wavHeader.NumOfChan), 2);
+	//	wavFileIn.read(reinterpret_cast<char *>(&wavHeader.SamplesPerSec), 4);
+	//	wavFileIn.read(reinterpret_cast<char *>(&wavHeader.bytesPerSec), 4);
+	//	wavFileIn.read(reinterpret_cast<char *>(&wavHeader.blockAlign), 2);
+	//	wavFileIn.read(reinterpret_cast<char *>(&wavHeader.bitsPerSample), 2);
+	//	wavFileIn.read(wavHeader.Subchunk2ID, 4);
+	//	wavFileIn.read(reinterpret_cast<char *>(&wavHeader.Subchunk2Size), 4);
 
-		wavFileIn.close();
+	//	wavFileIn.close();
 
-		cout << "File is				:" << filelength << " bytes." << endl;
+	//	cout << "File is				:" << filelength << " bytes." << endl;
 
-		cout << "RIFF header			:" << wavHeader.RIFFChunk[0] << wavHeader.RIFFChunk[1] << wavHeader.RIFFChunk[2] << wavHeader.RIFFChunk[3] << endl;
-		cout << "WAVE header			:" << wavHeader.ChunkID[0] << wavHeader.ChunkID[1] << wavHeader.ChunkID[2] << wavHeader.ChunkID[3] << endl;
-		cout << "FMT				:" << wavHeader.format[0] << wavHeader.format[1] << wavHeader.format[2] << wavHeader.format[3] << endl;
-		cout << "Data size			:" << wavHeader.ChunkSize << endl;
+	//	// RIFF chunk
+	//	cout << "Chunk ID			:" << wavHeader.ChunkID[0] << wavHeader.ChunkID[1] << wavHeader.ChunkID[2] << wavHeader.ChunkID[3] << endl;
+	//	cout << "Chunk size			:" << wavHeader.ChunkSize << endl;
+	//	cout << "Format				:" << wavHeader.format[0] << wavHeader.format[1] << wavHeader.format[2] << wavHeader.format[3] << endl;
 
-		// Display the sampling rate from the header
-		cout << "Sampling Rate			:" << wavHeader.SamplesPerSec << endl;
-		cout << "Number of bits used		:" << wavHeader.bitsPerSample << endl;
-		cout << "Number of channels		:" << wavHeader.NumOfChan << endl;
-		cout << "Number of bytes per sec		:" << wavHeader.bytesPerSec << endl;
-		cout << "Data length			:" << wavHeader.Subchunk2Size << endl;
-		cout << "Audio Format			:" << wavHeader.AudioFormat << endl;
+	//	// Format subchunk
+	//	cout << "Sub-chunk 1 ID			:" << wavHeader.Subchunk1ID[0] << wavHeader.Subchunk1ID[1] << wavHeader.Subchunk1ID[2] << wavHeader.Subchunk1ID[3] << endl;
+	//	cout << "Sub-chunk 1 Size		:" << wavHeader.Subchunk1Size << endl;
+	//	cout << "Audio Format			:" << wavHeader.AudioFormat << endl;
+	//	cout << "Number of channels		:" << wavHeader.NumOfChan << endl;
+	//	cout << "Sampling Rate			:" << wavHeader.SamplesPerSec << endl;
+	//	cout << "Number of bytes per sec		:" << wavHeader.bytesPerSec << endl;
+	//	cout << "Block align			:" << wavHeader.blockAlign << endl;
+	//	cout << "Number of bits used		:" << wavHeader.bitsPerSample << endl;
 
-		cout << "Block align			:" << wavHeader.blockAlign << endl;
-		cout << "Data string			:" << wavHeader.Subchunk2ID[0] << wavHeader.Subchunk2ID[1] << wavHeader.Subchunk2ID[2] << wavHeader.Subchunk2ID[3] << endl;
+	//	// Data subchunk
+	//	cout << "Data string			:" << wavHeader.Subchunk2ID[0] << wavHeader.Subchunk2ID[1] << wavHeader.Subchunk2ID[2] << wavHeader.Subchunk2ID[3] << endl;
+	//	cout << "Data length			:" << wavHeader.Subchunk2Size << endl;
 
-		cout << endl << endl << "Try something else? (y/n)";
-		cin >> answer;
-		cout << endl << endl;
-	} while (answer == "y");
 
-	getchar();
-	return 0;
+	//	cout << endl << endl << "Try something else? (y/n)";
+	//	cin >> answer;
+	//	cout << endl << endl;
+	//} while (answer == "y");
+
+	//getchar();
+	//return 0;
+
+
 
 	cout << "Guitar Solo Generator for the Minor Pentatonic Scale, enter the number of beats: ";
 	cin >> numBeats;
