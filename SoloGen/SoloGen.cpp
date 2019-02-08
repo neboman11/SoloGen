@@ -12,7 +12,493 @@
 //#include <Audioclient.h>
 //#include <mmdeviceapi.h>
 #include <fstream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sndfile.h>
+#include <cstdio>
+#include <sndfile.hh>
+#include "libsndfile/sfconfig.h"
+#include <string.h>
+#include <errno.h>
 
+#if HAVE_UNISTD_H
+#include <unistd.h>
+#else
+#include "libsndfile/sf_unistd.h"
+#endif
+
+#include "libsndfile/common.h"
+
+#if HAVE_ALSA_ASOUNDLIB_H
+#define ALSA_PCM_NEW_HW_PARAMS_API
+#define ALSA_PCM_NEW_SW_PARAMS_API
+#include <alsa/asoundlib.h>
+#include <sys/time.h>
+#endif
+
+#if defined (__ANDROID__)
+
+#elif defined (__linux__) || defined (__FreeBSD_kernel__) || defined (__FreeBSD__)
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <sys/soundcard.h>
+
+#elif HAVE_SNDIO_H
+#include <sndio.h>
+
+#elif (defined (sun) && defined (unix))
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <sys/auioio.h>
+
+#elif _WIN32
+#include <Windows.h>
+#include <mmsystem.h>
+
+#endif
+
+#define SIGNED_SIZEOF(x)	((int) sizeof(x))
+#define BUFFER_LEN 2048
+#define MAX_CHANNELS 6
+
+#if HAVE_ALSA_ASOUNDLIB_H
+
+static snd_pcm_t * alsa_open(int channels, unsigned srate, int realtime);
+static int alsa_write_float(snd_pcm_t *alsa_dev, float *data, int frames, int channels);
+
+static void alsa_play(int argc, char *argv[])
+{
+	static float buffer[BUFFER_LEN];
+	SNDFILE *sndfile;
+	SF_INFO sfinfo;
+	snd_pcm_t * alsa_dev;
+	int k, readcount, subformat;
+
+	for (k = 1; k < argc; k++)
+	{
+		memset(&sfinfo, 0, sizeof(sfinfo));
+
+		printf("Playing %s\n", argv[k]);
+		if (!(sndfile = sf_open(argv[k], SFM_READ, &sfinfo)))
+		{
+			puts(sf_strerror(NULL));
+			continue;
+		}
+
+		if (sfinfo.channesl < 1 || sfinfo.channels > 2)
+		{
+			printf("Error : channels = %d.\n", sfinfo.channels);
+			continue;
+		}
+
+		if ((alsa_dev = alsa_open(sfinfo.channels, (unsigned)sfinfo.samplerate, SF_FALSE)) == NULL)
+			continue;
+
+		subformat = sfinfo.format & SF_FORMAT_SUBMASK;
+
+		if (subformat == SF_FORMAT_FLOAT || subformat == SF_FORMAT_DOUBLE)
+		{
+			double scale;
+			int m;
+
+			sf_command(sndfile, SFC_CALC_SIGNAL_MAX, &scale, sizeof(scale));
+			if (scale > 1.0)
+				scale = 1.0 / scale;
+			else
+				scale = 1.0;
+
+			while (readcount = sf_read_float(sndfile, buffer, BUFFER_LEN))
+			{
+				for (m = 0; m < readcount; m++)
+					buffer[m] *= scale;
+				alsa_write_float(alsa_dev, buffer, BUFFER_LEN / sfinfo.channels, sfinfo.channels);
+			}
+		}
+		else
+		{
+			while (readcount = sf_read_float(sndfile, buffer, BUFFER_LEN))
+				alsa_write_float(alsa_dev, buffer, BUFFER_LEN / sfinfo.channels, sfinfo, channels);
+		}
+
+		snd_pcm_drain(alsa_dev);
+		snd_pcm_close(alsa_dev);
+
+		sf_close(sndfile);
+	}
+}
+
+static snd_pcm_t * alsa_open(int channels, unsigned samplerate, int realtime)
+{
+	const char * device = "default";
+	snd_pcm_t *alsa_dev = NULL;
+	snd_pcm_hw_params_t *hw_params;
+	snd_pcm_uframes_t buffer_size;
+	snd_pcm_uframes_t alsa_period_size, alsa_buffer_frames;
+	snd_pcm_sw_params_t *sw_params;
+
+	int err;
+
+	if (realtime)
+	{
+		alsa_period_size = 256;
+		alsa_buffer_frames = 3 * alsa_period_size;
+	}
+	else
+	{
+		alsa_period_size = 1024;
+		alsa_buffer_frames = 4 * alsa_period_size;
+	}
+
+	if ((err = snd_pcm_open(&alsa_dev, device, SND_PCM_STREAM_PLAYBACK, 0)) < 0)
+	{
+		fprintf(stderr, "cannot open audio device \"%s\" (%s)\n", device, snd_strerror(err));
+		goto catch_error;
+	}
+
+	snd_pcmnonblock(alsa_dev, 0);
+
+	if ((err = snd_pcm_hw_params_malloc(&hw_params)) < 0)
+	{
+		fprintf(stderr, "cannot allocate hardware parameter structure (%s)\n", snd_strerror(err));
+		goto catch_error;
+	}
+
+	if ((err = snd_pcm_hw_params_any(alsa_dev, hw_params)) < 0)
+	{
+		fprintf(stderr, "cannot initialize hardware parameter structure (%s)\n", snd_strerror(err));
+		goto catch_error;
+	}
+
+	if ((err = snd_pcm_hw_params_set_access(alsa_dev, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0)
+	{
+		fprintf(stderr, "cannot set access type(%s)\n", snd_strerror(err));
+		goto catch_error;
+	}
+
+	if ((err = snd_pcm_hw_params_set_format(alsa_dev, hw_params, SND_PCM_FORMAT_FLOAT)) < 0)
+	{
+		fprintf(stderr, "cannot set sample format (%s)\n", snd_strerror(err));
+		goto catch_error;
+	}
+
+	if ((err = snd_pcm_hw_params_set_rate_near(alsa_dev, hw_params, &samplerate, 0)) < 0)
+	{
+		fprintf(stderr, "cannot set sample rate (%s)\n", snd_strerror(err));
+		goto catch_error;
+	}
+
+	if ((err = snd_pcm_hw_params_set_channels(alsa_dev, hw_params, channels)) < 0)
+	{
+		fprintf(stderr, "cannot set channel count (%s)\n", snd_strerror(err));
+		goto catch_error;
+	}
+
+	if ((err = snd_pcm_hw_params_set_period_size_near(alsa_dev, hw_params, &alsa_period_size, 0)) < 0)
+	{
+		fprintf(stderr, "cannot set period size (%s)\n", snd_strerror(err));
+		goto catch_error;
+	}
+
+	if ((err = snd_pcm_hw_params(alsa_dev, hw_params)) < 0)
+	{
+		fprintf(stderr, "cannot set parameters (%s)\n", snd_strerror(err));
+		goto catch_error;
+	}
+
+	snd_pcm_hw_params_get_period_size(hw_params, &alsa_period_size, 0);
+	snd_pcm_hw_params_get_buffer_size(hw_params, &buffer_size);
+	if (alsa_period_size == buffer_size)
+	{
+		fprintf(stderr, "Can't use period equal to buffer size (%lu == %lu)", alsa_period_size, buffer_size);
+		goto catch_error;
+	}
+
+	snd_pcm_hw_params_free(hw_params);
+
+	if ((err = snd_pcm_sw_params_malloc(&sw_params)) != 0)
+	{
+		fprintf(stderr, "%s: snd_pcm_sw_params_current: %s", __func__, snd_strerror(err));
+		goto catch_error;
+	}
+
+	snd_pcm_sw_params_current(alsa_dev, sw_params);
+
+	if ((err = snd_pcm_sw_params(alsa_dev, sw_params)) != 0)
+	{
+		fprintf(stderr, "%s: snd_pcm_sw_params: %s", __func__, snd_strerror(err));
+		goto catch_error;
+	}
+
+	snd_pcm_sw_params_free(sw_params);
+
+	snd_pcm_reset(alsa_dev);
+
+catch_error :
+
+	if (err < 0 && alsa_dev != NULL)
+	{
+		snd_pcm_close(alsa_dev);
+		return NULL;
+	}
+
+	return alsa_dev;
+}
+
+static int alsa_write_float(snd_pcm_t *alsa_dev, float *data, int frames, int channels)
+{
+	static int epipe_count = 0;
+
+	int total = 0;
+	int retval;
+
+	if (epipe_count > 0)
+		epipe_count--;
+
+	while (total < frames)
+	{
+		retval = snd_pcm_writei(alsa_dev, data + total * channels, frames - total);
+
+		if (retval >= 0)
+		{
+			total += retval;
+			if (total == frames)
+				return total;
+
+			continue;
+		}
+
+		switch (retval)
+		{
+		case -EAGAIN:
+			puts("alsa_write_float: EAGAIN");
+			continue;
+			break;
+
+		case -EPIPE:
+			if (epipe_count > 0)
+			{
+				prinf("alsa_write_float: EPIPE %d\n", epipe_count);
+				if (epipe_count > 140)
+					return retval;
+			}
+			epipe_count += 100;
+
+#if 0
+			if (0)
+			{
+				snd_pcm_status_t *status;
+
+				snd_pcm_status_alloca(&status);
+				if ((retval = snd_pcm_status(alsa_dev, status)) < 0)
+					fprintf(stderr, "alsa_out: xrun. can't determine length\n");
+				else if (snd_pcm_status_get_state(status) == SND_PCM_STATE_XRUN)
+				{
+					struct timeval now, diff, tstamp;
+
+					gettimeofday(&now, 0);
+					snd_pcm_status_get_trigger_tstamp(status, &tstamp);
+					timersub(&now, &tstamp, &diff);
+
+					fprintf(stderr, "alsa_write_float xrun: of at leas %.3f mses. resetting stream\n", diff.tv_sec * 1000 + diff.tv_usec / 1000.0);
+				}
+				else
+					fprintf(stderr, "alsa_write_float: xrun. can't determine length\n");
+			}
+#endif
+
+			snd_pcm_prepare(alsa_dev);
+			break;
+
+		case -EBADFD:
+			fprintf(stderr, "alsa_write_float: Bad PCM state.n");
+			return 0;
+			break;
+
+		case -ESTRPIPE:
+			fprintf(stderr, "alsa_write_float: Suspend event.n");
+			return 0;
+			break;
+
+		case -EIO:
+			puts("alsa_write_float: EIO");
+			return 0;
+
+		default:
+			fprintf(stderr, "alsa_write_float: retval = %d\n", retval);
+			return 0;
+			break;
+		}
+	}
+
+	return total;
+}
+
+#endif
+
+#if _WIN32
+
+#define WIN32_BUFFER_LEN	(1 << 15)
+
+typedef struct
+{
+	HWAVEOUT	hwave;
+	WAVEHDR	whdr[2];
+
+	CRITICAL_SECTION	mutex;
+	HANDLE	Event;
+
+	short	buffer[WIN32_BUFFER_LEN / sizeof(short)];
+	int		current, bufferlen;
+	int		BuffersInUse;
+
+	SNDFILE *sndfile;
+	SF_INFO	sfinfo;
+
+	sf_count_t	remaining;
+} Win32_Audio_Data;
+
+static void win32_play_data(Win32_Audio_Data *audio_data)
+{
+	int thisread, readcount;
+
+	readcount = (audio_data->remaining > audio_data->bufferlen) ? audio_data->bufferlen : (int)audio_data->remaining;
+
+	thisread = (int)sf_read_short(audio_data->sndfile, (short *)(audio_data->whdr[audio_data->current].lpData), readcount);
+
+	audio_data->remaining -= thisread;
+
+	if (thisread > 0)
+	{
+		if (thisread < audio_data->bufferlen)
+			audio_data->whdr[audio_data->current].dwBufferLength = thisread * sizeof(short);
+
+		waveOutWrite(audio_data->hwave, (LPWAVEHDR) &(audio_data->whdr[audio_data->current]), sizeof(WAVEHDR));
+
+		EnterCriticalSection(&audio_data->mutex);
+		audio_data->BuffersInUse++;
+		LeaveCriticalSection(&audio_data->mutex);
+
+		audio_data->current = (audio_data->current + 1) % 2;
+	}
+}
+
+static void CALLBACK win32_audio_out_callback(HWAVEOUT hwave, UINT msg, DWORD_PTR data, DWORD param1, DWORD param2)
+{
+	Win32_Audio_Data *audio_data;
+
+	(void)hwave;
+	(void)param1;
+	(void)param2;
+
+	if (data == 0)
+		return;
+
+	audio_data = (Win32_Audio_Data*)data;
+
+	if (msg == MM_WOM_DONE)
+	{
+		EnterCriticalSection(&audio_data->mutex);
+		audio_data->BuffersInUse--;
+		LeaveCriticalSection(&audio_data->mutex);
+		SetEvent(audio_data->Event);
+	}
+}
+
+static void win32_play(int argc, char *argv[])
+{
+	Win32_Audio_Data audio_data;
+
+	WAVEFORMATEX wf;
+	int k, error;
+
+	audio_data.sndfile = NULL;
+	audio_data.hwave = 0;
+
+	for (k = 1; k < argc; k++)
+	{
+		printf("Playing %s\n", argv[k]);
+
+		if (!(audio_data.sndfile = sf_open(argv[k], SFM_READ, &(audio_data.sfinfo))))
+		{
+			puts(sf_strerror(NULL));
+			continue;
+		}
+
+		audio_data.remaining = audio_data.sfinfo.frames * audio_data.sfinfo.channels;
+		audio_data.current = 0;
+
+		InitializeCriticalSection(&audio_data.mutex);
+		audio_data.Event = CreateEvent(0, FALSE, FALSE, 0);
+
+		wf.nChannels = audio_data.sfinfo.channels;
+		wf.wFormatTag = WAVE_FORMAT_PCM;
+		wf.cbSize = 0;
+		wf.wBitsPerSample = 16;
+
+		wf.nSamplesPerSec = audio_data.sfinfo.samplerate;
+
+		wf.nBlockAlign = audio_data.sfinfo.channels * sizeof(short);
+
+		wf.nAvgBytesPerSec = wf.nBlockAlign * wf.nSamplesPerSec;
+
+		error = waveOutOpen(&(audio_data.hwave), WAVE_MAPPER, &wf, (DWORD_PTR)win32_audio_out_callback, (DWORD_PTR)&audio_data, CALLBACK_FUNCTION);
+		if (error)
+		{
+			puts("waveOutOpen failed.");
+			audio_data.hwave = 0;
+			continue;
+		}
+
+		audio_data.whdr[0].lpData = (char*)audio_data.buffer;
+		audio_data.whdr[1].lpData = ((char*)audio_data.buffer) + sizeof(audio_data.buffer) / 2;
+
+		audio_data.whdr[0].dwBufferLength = sizeof(audio_data.buffer) / 2;
+		audio_data.whdr[1].dwBufferLength = sizeof(audio_data.buffer) / 2;
+
+		audio_data.whdr[0].dwFlags = 0;
+		audio_data.whdr[1].dwFlags = 0;
+
+		audio_data.bufferlen = sizeof(audio_data.buffer) / 2 / sizeof(short);
+
+		if ((error = waveOutPrepareHeader(audio_data.hwave, &(audio_data.whdr[0]), sizeof(WAVEHDR))))
+		{
+			printf("waveOutPrepareHeader [0] failed : %08X\n", error);
+			waveOutClose(audio_data.hwave);
+			continue;
+		}
+
+		if ((error = waveOutPrepareHeader(audio_data.hwave, &(audio_data.whdr[1]), sizeof(WAVEHDR))))
+		{
+			printf("waveOutPrepareHeader [1] failed : %08X\n", error);
+			waveOutUnprepareHeader(audio_data.hwave, &(audio_data.whdr[0]), sizeof(WAVEHDR));
+			waveOutClose(audio_data.hwave);
+			continue;
+		}
+
+		audio_data.BuffersInUse = 0;
+		win32_play_data(&audio_data);
+		win32_play_data(&audio_data);
+
+		while (audio_data.BuffersInUse > 0)
+		{
+			WaitForSingleObject(audio_data.Event, INFINITE);
+
+			win32_play_data(&audio_data);
+		}
+
+		waveOutUnprepareHeader(audio_data.hwave, &(audio_data.whdr[0]), sizeof(WAVEHDR));
+		waveOutUnprepareHeader(audio_data.hwave, &(audio_data.whdr[1]), sizeof(WAVEHDR));
+
+		waveOutClose(audio_data.hwave);
+		audio_data.hwave = 0;
+
+		DeleteCriticalSection(&audio_data.mutex);
+
+		sf_close(audio_data.sndfile);
+	}
+}
+
+#endif
 
 //#define REFTIMES_PER_SEC 10000000
 //#define REFTIMES_PER_MILLISEC 10000
@@ -152,6 +638,9 @@ vector<int*> genRandNotes(int numBeats);
 vector<int*> genRandNotesPos(int numBeats);
 int* convPosToNote(int pos);
 int getFileSize(FILE *inFile);
+static void create_file(const char * fname, int format);
+static void read_file(const char * fname);
+static void process_data(double *data, int count, int channels);
 
 int main(int argc, char* argv[])
 {
@@ -234,7 +723,79 @@ int main(int argc, char* argv[])
 	//getchar();
 	//return 0;
 
+	if (argc < 2)
+	{
+		printf("\nUsage : Hot dog <input sound file>\n\n");
+		printf("Using %s.\n\n", sf_version_string());
+#if _WIN32
+		printf("This is a Unix style command line application which\n"
+			"should be run in a MSDOS box or Command Shell windows.\n\n");
+		printf("Sleeping for 5 seconds before exiting.\n\n");
 
+		Sleep(5 * 1000);
+#endif
+		return 1;
+	}
+
+#if _WIN32
+	win32_play(argc, argv);
+#else
+	puts("*** Playing sound not supported on this platform.");
+	puts("*** Please feel free to submit a patch.");
+	return 1;
+#endif
+	return 0;
+
+	static double data[BUFFER_LEN];
+
+	SNDFILE *infile, *outfile;
+
+	SF_INFO sfinfo;
+	int readcount;
+	const char *infilename = "C:\\Windows\\media\\Alarm01.wav";
+	const char *outfilename = "output.wav";
+
+	memset(&sfinfo, 0, sizeof(sfinfo));
+
+	if (!(infile = sf_open(infilename, SFM_READ, &sfinfo)))
+	{
+		printf("Not able to open file %s.\n", infilename);
+		puts(sf_strerror(NULL));
+		return 1;
+	}
+
+	if (sfinfo.channels > MAX_CHANNELS)
+	{
+		printf("Not able to process more than %d channels\n", MAX_CHANNELS);
+		return 1;
+	}
+
+	if (!(outfile = sf_open(outfilename, SFM_WRITE, &sfinfo)))
+	{
+		printf("Not able to open output file %s.\n", outfilename);
+		puts(sf_strerror(NULL));
+		return 1;
+	}
+
+	while (readcount = sf_read_double(infile, data, BUFFER_LEN))
+	{
+		process_data(data, readcount, sfinfo.channels);
+		sf_write_double(outfile, data, readcount);
+	}
+
+	sf_close(infile);
+	sf_close(outfile);
+
+	const char * fname = "C:\\Windows\\media\\Alarm01.wav";
+
+	puts("\nSimple example showing usage of the c++ SndfileHandle object.\n");
+
+	read_file(fname);
+
+	puts("Done.\n");
+
+	system("PAUSE");
+	return 0;
 
 	cout << "Guitar Solo Generator for the Minor Pentatonic Scale, enter the number of beats: ";
 	cin >> numBeats;
@@ -253,6 +814,52 @@ int getFileSize(FILE *inFile)
 
 	fseek(inFile, 0, SEEK_SET);
 	return fileSize;
+}
+
+void create_file(const char * fname, int format)
+{
+	static short buffer[BUFFER_LEN];
+
+	SndfileHandle file;
+	int channels = 2;
+	int srate = 48000;
+
+	printf("Creating file named '%s'\n", fname);
+
+	file = SndfileHandle(fname, SFM_WRITE, format, channels, srate);
+
+	memset(buffer, 0, sizeof(buffer));
+
+	file.write(buffer, BUFFER_LEN);
+
+	puts("");
+}
+
+void read_file(const char * fname)
+{
+	static short buffer[BUFFER_LEN];
+
+	SndfileHandle file;
+
+	file = SndfileHandle(fname);
+
+	printf("Opened file '%s'\n", fname);
+	printf("	Sample rate	: %d\n", file.samplerate());
+	printf("	Channels	: %d\n", file.channels());
+
+	file.read(buffer, BUFFER_LEN);
+
+	puts("");
+}
+
+void process_data(double * data, int count, int channels)
+{
+	double channel_gain[MAX_CHANNELS] = { 0.5, 0.8, 0.1, 0.4, 0.4, 0.9 };
+	int k, chan;
+
+	for (chan = 0; chan < channels; chan++)
+		for (k = chan; k < count; k += channels)
+			data[k] *= channel_gain[chan];
 }
 
 void outputTabChrom(int numBeats)

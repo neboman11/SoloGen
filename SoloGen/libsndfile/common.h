@@ -38,7 +38,7 @@
 #endif
 
 #ifdef __cplusplus
-#error "This code is not designed to be compiled with a C++ compiler."
+//#error "This code is not designed to be compiled with a C++ compiler."
 #endif
 
 #ifdef INT64_C
@@ -232,7 +232,7 @@ typedef struct
 
 static inline PEAK_INFO *
 peak_info_calloc (int channels)
-{	return calloc (1, sizeof (PEAK_INFO) + channels * sizeof (PEAK_POS)) ;
+{	return (PEAK_INFO*)calloc (1, sizeof (PEAK_INFO) + channels * sizeof (PEAK_POS)) ;
 } /* peak_info_calloc */
 
 typedef struct
