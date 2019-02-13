@@ -18,9 +18,6 @@
     <ClInclude Include="pch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="libsndfile\config.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -31,8 +28,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\..\..\..\..\Program Files\Mega-Nerd\libsndfile\bin\libsndfile-1.dll">
-      <Filter>Source Files</Filter>
-    </None>
+    <None Include="SoloGen - Copy.cpp.bak" />
   </ItemGroup>
 </Project>
