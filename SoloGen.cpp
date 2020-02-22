@@ -1,12 +1,14 @@
 // SoloGen.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
-#include "pch.h"
 #include <iostream>
 #include <cstdlib>
 #include <time.h>
 #include <string>
 #include <vector>
+#include <cmath>
+#include "AudioFile/AudioFile.h"
+#include "tclap/CmdLine.h"
 
 using namespace std;
 
@@ -36,20 +38,20 @@ vector<int*> genRandNotes(int numBeats);
 vector<int*> genRandNotesPos(int numBeats);
 int* convPosToNote(int pos);
 
-int main()
+int main(int argc, char** argv)
 {
 	string answer;
 	srand(time(NULL));	// Set rand() seed to current time to give pseudorandom effect
-	int tempo = 80;		// Desired output tempo
-	char key = 'A';		// Key used for generating PentaScale
+	// int tempo = 80;		// Desired output tempo
+	// char key = 'A';		// Key used for generating PentaScale
 	int numBeats = 0;	// Total number of beats to generate for
 
-	cout << "Guitar Solo Generator for the Minor Pentatonic Scale, enter the number of beats: ";
-	cin >> numBeats;
+	cout << "Guitar Solo Generator for the Minor Pentatonic Scale, enter the number of beats:"  << endl;
+	// cin >> numBeats;
+	numBeats = stoi(argv[1]);
 	outputTabChrom(numBeats);
 	cout << endl << endl;
 	outputTabPenta(numBeats);
-	system("PAUSE");
 }
 
 void outputTabChrom(int numBeats)
@@ -73,7 +75,7 @@ void outputTabChrom(int numBeats)
 	int beatPos = 0;	// Accumulator to keep position beat-wise in the tab
 	// Loops through the arrays in vector <notes> and places the contained notes in position
 	// in the tab
-	for (int i = 0; i < notes.size(); i++)
+	for (int i = 0; i < (int)notes.size(); i++)
 	{
 		if (notes.at(i)[0] > 9)
 		{
@@ -114,7 +116,7 @@ void outputTabPenta(int numBeats)
 		}
 	}
 
-	for (int i = 0; i < notes.size(); i++)
+	for (int i = 0; i < (int)notes.size(); i++)
 	{
 		int* pitch = convPosToNote(notes.at(i)[0]);
 		notes.at(i) = new int[3] {pitch[0], pitch[1], notes.at(i)[1]};
@@ -123,7 +125,7 @@ void outputTabPenta(int numBeats)
 	int beatPos = 0;	// Accumulator to keep position beat-wise in the tab
 	// Loops through the arrays in vector <notes> and places the contained notes in position
 	// in the tab
-	for (int i = 0; i < notes.size(); i++)
+	for (int i = 0; i < (int)notes.size(); i++)
 	{
 		if (notes.at(i)[0] > 9)
 		{

@@ -1,0 +1,11 @@
+CXX=@CXX@
+LD=@CXX@
+CXXFLAGS=@CXXFLAGS@ -Wall
+CPPFLAGS=@CPPFLAGS@ -I~/include
+
+SoloGen: SoloGen.o
+	$(LD) -o $@ $^
+
+clean:
+	rm -f SoloGen *.o
+.PHONY: clean
