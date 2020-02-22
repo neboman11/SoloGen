@@ -79,8 +79,8 @@ void createWAV(vector<int*> notes, int numBeats)
 
 	buffer.resize(2);
 
-	buffer[0].resize(10000 * numBeats);
-	buffer[1].resize(10000 * numBeats);
+	buffer[0].resize(wavLength * numBeats);
+	buffer[1].resize(wavLength * numBeats);
 
 	int numChannels = 2;
 	int numSamplesPerChannel = wavLength * numBeats;
