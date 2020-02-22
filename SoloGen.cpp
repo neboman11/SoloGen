@@ -9,13 +9,14 @@
 #include <cmath>
 #include <math.h>
 #include <map>
-#include "AudioFile/AudioFile.h"
-#include "tclap/CmdLine.h"
+#include <AudioFile/AudioFile.h>
+#include <tclap/CmdLine.h>
 
 using namespace std;
 
 enum CmdOptions {
-	NUM_BEATS
+	LENGTH,
+	TEMPO
 };
 
 const double SEMITONE_STEP = pow(2.0, 1.0/12);
@@ -26,11 +27,15 @@ const int STRING_STEPS[5] = {5, 5, 5, 4, 5};
 
 const int N_FRETS = 24;
 
+const double SAMPLE_RATE = 44100.0;
+
+const double SECONDS_PER_SAMPLE = 1 / SAMPLE_RATE;
+
 double noteToFreq(int* note);
-void createWAV(vector<int*> notes, int numBeats);
+void createWAV(vector<int*> notes, map<int, string> givenOptions);
 map<int, string> parseCMD(int argc, char** argv);
-void outputTabChrom(int numBeats);
-void outputTabPenta(int numBeats);
+void outputTabChrom(map<int, string> givenOptions);
+void outputTabPenta(map<int, string> givenOptions);
 int randPos();
 int randFret();
 int randString();
@@ -50,9 +55,9 @@ int main(int argc, char** argv)
 	givenOptions = parseCMD(argc, argv);
 
 	cout << "Guitar Solo Generator for the Minor Pentatonic Scale, enter the number of beats:"  << endl;
-	outputTabChrom(stoi(givenOptions[NUM_BEATS]));
+	outputTabChrom(givenOptions);
 	cout << endl << endl;
-	outputTabPenta(stoi(givenOptions[NUM_BEATS]));
+	outputTabPenta(givenOptions);
 
 	// createWAV();
 }
@@ -69,38 +74,38 @@ double noteToFreq(int* note)
 	return noteFreq;
 }
 
-void createWAV(vector<int*> notes, int numBeats)
+void createWAV(vector<int*> notes, map<int, string> givenOptions)
 {
 	AudioFile<double> audioFile;
 
 	AudioFile<double>::AudioBuffer buffer;
 
-	int wavLength = 5000;
+	int wavLength = SAMPLE_RATE * stoi(givenOptions[LENGTH]);
+	int numBeats = stoi(givenOptions[LENGTH]) * stoi(givenOptions[TEMPO]) / 60;
 
 	buffer.resize(2);
 
-	buffer[0].resize(wavLength * numBeats);
-	buffer[1].resize(wavLength * numBeats);
+	buffer[0].resize(wavLength);
+	buffer[1].resize(wavLength);
 
 	int numChannels = 2;
-	int numSamplesPerChannel = wavLength * numBeats;
-	int numSamplesPerChannelPerBeat = wavLength;
-	float sampleRate = 44100.f;
+	int numSamplesPerChannel = wavLength;
+	int numSamplesPerBeat = wavLength / numBeats;
 	int noteLength = 0;
 	int currentNote = 0;
 
 	for (int i = 0; i < numSamplesPerChannel; i++)
 	{
-		float sample = sinf(2. * M_PI * ((float) i / sampleRate) * noteToFreq(notes.at(currentNote)));
+		float sample = sinf(2. * M_PI * ((float) i / SAMPLE_RATE) * noteToFreq(notes.at(currentNote)));
 
 		for (int channel = 0; channel < numChannels; channel++)
 		{
 			buffer[channel][i] = sample * 0.5;
 		}
 
-		if (i > (notes.at(currentNote)[2] * numSamplesPerChannelPerBeat) + noteLength)
+		if (i > (notes.at(currentNote)[2] * numSamplesPerBeat) + noteLength)
 		{
-			noteLength += notes.at(currentNote)[2] * numSamplesPerChannelPerBeat;
+			noteLength += notes.at(currentNote)[2] * numSamplesPerBeat;
 			currentNote++;
 		}
 
@@ -132,14 +137,21 @@ map<int, string> parseCMD(int argc, char** argv)
 	{
 		TCLAP::CmdLine cmd("SoloGen", ' ', "0.1");
 
-		TCLAP::UnlabeledValueArg<int> numBeats("input", "The number of beats to generate", true, 0, "num");
+		TCLAP::ValueArg<int> length("l", "length", "The length of the solo to generate in seconds", true, 5, "time (s)");
 
-		cmd.add(numBeats);
+		cmd.add(length);
+
+		TCLAP::ValueArg<int> tempo("t", "tempo", "The tempo of the resulting audio file", true, 120, "temp (bpm)");
+
+		cmd.add(tempo);
 
 		cmd.parse(argc, argv);
 
-		givenOptions[NUM_BEATS] = to_string(numBeats.getValue());
+		givenOptions[LENGTH] = to_string(length.getValue());
+
+		givenOptions[TEMPO] = to_string(tempo.getValue());
 	}
+
 	catch(TCLAP::ArgException& e)
 	{
 		std::cerr << e.argId() << " threw error " << e.error() << '\n';
@@ -148,10 +160,12 @@ map<int, string> parseCMD(int argc, char** argv)
 	return givenOptions;
 }
 
-void outputTabChrom(int numBeats)
+void outputTabChrom(map<int, string> givenOptions)
 {
 	vector<int*> notes;		// Vector of arrays of integers containing note info (pitch, length)
 	vector<string*> tab;	// Vector of arrays of strings containing each note per beat
+
+	int numBeats = stoi(givenOptions[LENGTH]) * stoi(givenOptions[TEMPO]) / 60;
 
 	// Generate random notes and place them into vector <notes>
 	notes = genRandNotes(numBeats);
@@ -191,13 +205,15 @@ void outputTabChrom(int numBeats)
 		cout << endl;
 	}
 
-	createWAV(notes, numBeats);
+	createWAV(notes, givenOptions);
 }
 
-void outputTabPenta(int numBeats)
+void outputTabPenta(map<int, string> givenOptions)
 {
 	vector<int*> notes;		// Vector of arrays of integers containing note info (pitch, length)
 	vector<string*> tab;	// Vector of arrays of strings containing each note per beat
+
+	int numBeats = stoi(givenOptions[LENGTH]) * stoi(givenOptions[TEMPO]) / 60;
 
 	// Generate random notes and place them into vector <notes>
 	notes = genRandNotesPos(numBeats);
@@ -243,7 +259,7 @@ void outputTabPenta(int numBeats)
 		cout << endl;
 	}
 
-	createWAV(notes, numBeats);
+	createWAV(notes, givenOptions);
 }
 
 // Returns a random integer 0 >= x > 30 to be converted into a PentaScale Position
