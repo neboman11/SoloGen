@@ -7,27 +7,28 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <math.h>
+#include <map>
 #include "AudioFile/AudioFile.h"
 #include "tclap/CmdLine.h"
 
 using namespace std;
 
-typedef struct WAV_HEADER {
-	char			ChunkID[4];		// RIFF Header
-	unsigned long	ChunkSize;		// RIFF Chuck Size
-	char			format[4];		// Format Header
-	char			Subchunk1ID[4];	// ID of the fmt chunk
-	unsigned long	Subchunk1Size;	// Size of the fmt chunk
-	unsigned short	AudioFormat;	// Audio format 1=PCM, 6=Mu-Law, 7=A-Law, 257=IBM Mu-Law, 258=IBM A-Law, 259=ADPCM
-	unsigned short	NumOfChan;		// Number of channels 1=Mono 2=Stereo
-	unsigned long	SamplesPerSec;	// Sampling Frequency in Hz
-	unsigned long	bytesPerSec;	// bytes per second
-	unsigned short	blockAlign;		// 2=16-bit mono, 4=16-bit stereo
-	unsigned short	bitsPerSample;	// Number of bits per sample
-	char			Subchunk2ID[4];	// "data" string
-	unsigned long	Subchunk2Size;	// Sampled data length
-}wav_hdr;
+enum CmdOptions {
+	NUM_BEATS
+};
 
+const double SEMITONE_STEP = pow(2.0, 1.0/12);
+
+const double LOW_E_FREQ = 82.4;
+
+const int STRING_STEPS[5] = {5, 5, 5, 4, 5};
+
+const int N_FRETS = 24;
+
+double noteToFreq(int* note);
+void createWAV(vector<int*> notes, int numBeats);
+map<int, string> parseCMD(int argc, char** argv);
 void outputTabChrom(int numBeats);
 void outputTabPenta(int numBeats);
 int randPos();
@@ -40,18 +41,109 @@ int* convPosToNote(int pos);
 
 int main(int argc, char** argv)
 {
+	map<int, string> givenOptions;
 	string answer;
 	srand(time(NULL));	// Set rand() seed to current time to give pseudorandom effect
 	// int tempo = 80;		// Desired output tempo
 	// char key = 'A';		// Key used for generating PentaScale
-	int numBeats = 0;	// Total number of beats to generate for
+
+	givenOptions = parseCMD(argc, argv);
 
 	cout << "Guitar Solo Generator for the Minor Pentatonic Scale, enter the number of beats:"  << endl;
-	// cin >> numBeats;
-	numBeats = stoi(argv[1]);
-	outputTabChrom(numBeats);
+	outputTabChrom(stoi(givenOptions[NUM_BEATS]));
 	cout << endl << endl;
-	outputTabPenta(numBeats);
+	outputTabPenta(stoi(givenOptions[NUM_BEATS]));
+
+	// createWAV();
+}
+
+double noteToFreq(int* note)
+{
+	int noteString = note[1];
+	int noteFret = note[0];
+
+	double base_freq = LOW_E_FREQ * pow(SEMITONE_STEP, STRING_STEPS[noteString]);
+
+	double noteFreq = base_freq * pow(SEMITONE_STEP, noteFret);
+
+	return noteFreq;
+}
+
+void createWAV(vector<int*> notes, int numBeats)
+{
+	AudioFile<double> audioFile;
+
+	AudioFile<double>::AudioBuffer buffer;
+
+	buffer.resize(2);
+
+	buffer[0].resize(10000 * numBeats);
+	buffer[1].resize(10000 * numBeats);
+
+	int numChannels = 2;
+	int numSamplesPerChannel = 10000 * numBeats;
+	int numSamplesPerChannelPerBeat = 10000;
+	float sampleRate = 44100.f;
+	int noteLength = 0;
+	int currentNote = 0;
+
+	for (int i = 0; i < numSamplesPerChannel; i++)
+	{
+		float sample = sinf(2. * M_PI * ((float) i / sampleRate) * noteToFreq(notes.at(currentNote)));
+
+		for (int channel = 0; channel < numChannels; channel++)
+		{
+			buffer[channel][i] = sample * 0.5;
+		}
+
+		if (i > (notes.at(currentNote)[2] * numSamplesPerChannelPerBeat) + noteLength)
+		{
+			noteLength += notes.at(currentNote)[2] * numSamplesPerChannelPerBeat;
+			currentNote++;
+		}
+
+		if (currentNote >= (int)notes.size())
+		{
+			currentNote--;
+		}
+	}
+
+	audioFile.setAudioBuffer(buffer);
+
+	audioFile.setAudioBufferSize(numChannels, numSamplesPerChannel);
+
+	audioFile.setNumSamplesPerChannel(numSamplesPerChannel);
+
+	audioFile.setNumChannels(numChannels);
+
+	audioFile.setBitDepth(24);
+	audioFile.setSampleRate(44100);
+
+	audioFile.save("./test.wav");
+}
+
+map<int, string> parseCMD(int argc, char** argv)
+{
+	map<int, string> givenOptions;
+
+	try
+	{
+		TCLAP::CmdLine cmd("SoloGen", ' ', "0.1");
+
+		TCLAP::UnlabeledValueArg<int> numBeats("input", "The number of beats to generate", true, 0, "num");
+
+		cmd.add(numBeats);
+
+		cmd.parse(argc, argv);
+
+		givenOptions[NUM_BEATS] = to_string(numBeats.getValue());
+	}
+	catch(TCLAP::ArgException& e)
+	{
+		std::cerr << e.argId() << " threw error " << e.error() << '\n';
+	}
+	
+	return givenOptions;
 }
 
 void outputTabChrom(int numBeats)
@@ -96,6 +188,8 @@ void outputTabChrom(int numBeats)
 			cout << tab.at(j)[i];
 		cout << endl;
 	}
+
+	createWAV(notes, numBeats);
 }
 
 void outputTabPenta(int numBeats)
@@ -146,6 +240,8 @@ void outputTabPenta(int numBeats)
 			cout << tab.at(j)[i];
 		cout << endl;
 	}
+
+	createWAV(notes, numBeats);
 }
 
 // Returns a random integer 0 >= x > 30 to be converted into a PentaScale Position

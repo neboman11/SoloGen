@@ -1,7 +1,7 @@
 CXX=@CXX@
 LD=@CXX@
-CXXFLAGS=@CXXFLAGS@ -Wall
-CPPFLAGS=@CPPFLAGS@ -I~/include
+CXXFLAGS=-g -Wall
+CPPFLAGS=@CPPFLAGS@
 
 SoloGen: SoloGen.o
 	$(LD) -o $@ $^

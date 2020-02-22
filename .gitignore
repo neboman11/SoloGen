@@ -43,3 +43,5 @@ config.log
 autom4te.cache/*
 Makefile
 config.status
+.vscode/launch.json
+.vscode/tasks.json
