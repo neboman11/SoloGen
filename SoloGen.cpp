@@ -75,14 +75,16 @@ void createWAV(vector<int*> notes, int numBeats)
 
 	AudioFile<double>::AudioBuffer buffer;
 
+	int wavLength = 5000;
+
 	buffer.resize(2);
 
 	buffer[0].resize(10000 * numBeats);
 	buffer[1].resize(10000 * numBeats);
 
 	int numChannels = 2;
-	int numSamplesPerChannel = 10000 * numBeats;
-	int numSamplesPerChannelPerBeat = 10000;
+	int numSamplesPerChannel = wavLength * numBeats;
+	int numSamplesPerChannelPerBeat = wavLength;
 	float sampleRate = 44100.f;
 	int noteLength = 0;
 	int currentNote = 0;

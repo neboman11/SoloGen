@@ -43,5 +43,11 @@ config.log
 autom4te.cache/*
 Makefile
 config.status
+
+# VS Code files
 .vscode/launch.json
 .vscode/tasks.json
+
+# test output files
+test.tab
+test.wav
