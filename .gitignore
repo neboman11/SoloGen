@@ -51,3 +51,6 @@ config.status
 # test output files
 test.tab
 test.wav
+
+# Build directory
+build/*
