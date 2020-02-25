@@ -45,12 +45,9 @@ Makefile
 config.status
 
 # VS Code files
-.vscode/launch.json
-.vscode/tasks.json
+.vscode/*
 
-# test output files
-test.tab
-test.wav
-
-# Build directory
-build/*
+# Output files
+*.tab
+*.flac
+*.wav
