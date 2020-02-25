@@ -9,6 +9,8 @@
 #include <cmath>
 #include <math.h>
 #include <map>
+#include <stdlib.h>
+#include <stdio.h>
 #include <AudioFile/AudioFile.h>
 #include <tclap/CmdLine.h>
 
@@ -16,7 +18,12 @@ using namespace std;
 
 enum CmdOptions {
 	LENGTH,
-	TEMPO
+	TEMPO,
+	OUTFILE,
+	FLAC,
+	CHROMATIC,
+	PENTATONIC,
+	TIME_SIGNATURE
 };
 
 const double SEMITONE_STEP = pow(2.0, 1.0/12);
@@ -31,6 +38,19 @@ const double SAMPLE_RATE = 44100.0;
 
 const double SECONDS_PER_SAMPLE = 1 / SAMPLE_RATE;
 
+const int BUFFER_SIZE = 512;
+
+const string TIME_SIGNATURES[7] = {
+	"2/2",
+	"3/4",
+	"4/4",
+	"5/4",
+	"7/4",
+	"6/8",
+	"8/8"
+};
+
+void convertWAVtoFLAC(string fileName);
 double noteToFreq(int* note);
 void createWAV(vector<int*> notes, map<int, string> givenOptions);
 map<int, string> parseCMD(int argc, char** argv);
@@ -54,12 +74,91 @@ int main(int argc, char** argv)
 
 	givenOptions = parseCMD(argc, argv);
 
-	cout << "Guitar Solo Generator for the Minor Pentatonic Scale, enter the number of beats:"  << endl;
-	outputTabChrom(givenOptions);
-	cout << endl << endl;
-	outputTabPenta(givenOptions);
+	if (givenOptions[CHROMATIC] == "true")
+	{
+		cout << "Now generating a chromatic solo..."  << endl;
+		outputTabChrom(givenOptions);
+	}
+	cout << endl;
 
-	// createWAV();
+	if (givenOptions[PENTATONIC] == "true")
+	{
+		cout << "Now generating a pentatonic solo..."  << endl;
+		outputTabPenta(givenOptions);
+	}
+
+	if (givenOptions[FLAC] == "true")
+	{
+		convertWAVtoFLAC(givenOptions[OUTFILE]);
+	}
+}
+
+void convertWAVtoFLAC(string fileName)
+{
+	// FILE object for reading from the pipe for the gawk command                                                                                                                                                                               
+	FILE* pipeTown;
+	// Array of characters to use as a buffer for reading from the pipe                                                                                                                                                                         
+	char buffer[BUFFER_SIZE];
+	// Pointer to the currently read in line from the pipe                                                                                                                                                                                      
+	char* workingLine;
+
+	// Show the command being run
+	cout << "flac -f -o " + fileName.substr(0, fileName.length() - 3) + "flac " + fileName << endl;
+
+	// Open the pipe with the given command in read mode
+	pipeTown = popen(("flac -f -o " + fileName.substr(0, fileName.length() - 3) + "flac " + fileName).c_str(), "r");
+
+	// If the pipe failed to open
+	if (!pipeTown)
+	{
+		// Let the user know
+		cerr << "Failed to run command: " << "flac -f -o " + fileName.substr(0, fileName.length() - 3) + "flac " + fileName << endl;
+		return;
+	}
+
+	// Read in the first buffer space of the pipe output                                                                                                                                                                                        
+	workingLine = fgets(buffer, BUFFER_SIZE, pipeTown);
+
+	// Loop until there is nothing more to be read from the buffer                                                                                                                                                                              
+	while (workingLine != NULL)
+	{
+		// Print out the contents of the current working line                                                                                                                                                                                     
+		printf("%s", workingLine);
+		// Read in the next buffer space of the pipe output                                                                                                                                                                                       
+		workingLine = fgets(buffer, BUFFER_SIZE, pipeTown);
+	}
+
+	// Close the pipe                                                                                                                                                                                                                           
+	pclose(pipeTown);
+
+	// Show the command being run
+	cout << "rm -f " + fileName << endl;
+
+	// Open the pipe with the given command in read mode
+	pipeTown = popen(("rm -f " + fileName).c_str(), "r");
+
+	// If the pipe failed to open
+	if (!pipeTown)
+	{
+		// Let the user know
+		cerr << "Failed to run command: " << "rm -f " + fileName << endl;
+		return;
+	}
+
+	// Read in the first buffer space of the pipe output                                                                                                                                                                                        
+	workingLine = fgets(buffer, BUFFER_SIZE, pipeTown);
+
+	// Loop until there is nothing more to be read from the buffer                                                                                                                                                                              
+	while (workingLine != NULL)
+	{
+		// Print out the contents of the current working line                                                                                                                                                                                     
+		printf("%s", workingLine);
+		// Read in the next buffer space of the pipe output                                                                                                                                                                                       
+		workingLine = fgets(buffer, BUFFER_SIZE, pipeTown);
+	}
+
+	// Close the pipe                                                                                                                                                                                                                           
+	pclose(pipeTown);
 }
 
 double noteToFreq(int* note)
@@ -126,7 +225,7 @@ void createWAV(vector<int*> notes, map<int, string> givenOptions)
 	audioFile.setBitDepth(24);
 	audioFile.setSampleRate(44100);
 
-	audioFile.save("./test.wav");
+	audioFile.save(givenOptions[OUTFILE]);
 }
 
 map<int, string> parseCMD(int argc, char** argv)
@@ -141,20 +240,102 @@ map<int, string> parseCMD(int argc, char** argv)
 
 		cmd.add(length);
 
-		TCLAP::ValueArg<int> tempo("t", "tempo", "The tempo of the resulting audio file", true, 120, "temp (bpm)");
+		TCLAP::ValueArg<int> tempo("t", "tempo", "The tempo of the resulting audio file", true, 120, "tempo (bpm)");
 
 		cmd.add(tempo);
+
+		TCLAP::ValueArg<string> outFile("o", "output", "The name of the output file", false, "output.wav", "filename");
+
+		cmd.add(outFile);
+
+		TCLAP::SwitchArg flacConvert("f", "flac", "Output the audio file in flac format. Flac must be installed for this to work", false);
+
+		cmd.add(flacConvert);
+
+		TCLAP::SwitchArg chromatic("c", "chromatic", "Generate a solo using the chromatic scale", false);
+
+		cmd.add(chromatic);
+
+		TCLAP::SwitchArg pentatonic("p", "pentatonic", "Generate a solo using the minor pentatonic scale", false);
+
+		cmd.add(pentatonic);
+
+		TCLAP::ValueArg<string> timeSig("s", "time-signature", "The time signature to generate for", true, "4/4", "time signature (#/#)");
+
+		cmd.add(timeSig);
 
 		cmd.parse(argc, argv);
 
 		givenOptions[LENGTH] = to_string(length.getValue());
 
 		givenOptions[TEMPO] = to_string(tempo.getValue());
+
+		// Check if converting to flac if output file extension matches flac instead of wav
+		if (outFile.getValue().substr(outFile.getValue().length() - 4, outFile.getValue().length()) == ".wav")
+		{
+			givenOptions[OUTFILE] = outFile.getValue();
+		}
+
+		else
+		{
+			givenOptions[OUTFILE] = outFile.getValue() + ".wav";
+		}
+		
+
+		if (flacConvert.getValue())
+		{
+			givenOptions[FLAC] = "true";
+		}
+
+		else
+		{
+			givenOptions[FLAC] = "false";
+		}
+
+		if (chromatic.getValue() && pentatonic.getValue() && pentatonic.isSet())
+		{
+			cerr << "Only one scale option may be given." << endl;
+			throw new exception();
+		}
+
+		if (chromatic.getValue())
+		{
+			givenOptions[CHROMATIC] = "true";
+			givenOptions[PENTATONIC] = "false";
+		}
+
+		else
+		{
+			givenOptions[CHROMATIC] = "false";
+			givenOptions[PENTATONIC] = "true";
+		}
+
+		bool validSig = false;
+
+		for (string s : TIME_SIGNATURES)
+		{
+			if (s == timeSig.getValue())
+			{
+				validSig = true;
+			}
+		}
+
+		if (validSig)
+		{
+			givenOptions[TIME_SIGNATURE] = timeSig.getValue();
+		}
+
+		else
+		{
+			cerr << "Invalid or unknown time signature given." << endl;
+			throw new exception();
+		}
+		
 	}
 
 	catch(TCLAP::ArgException& e)
 	{
-		std::cerr << e.argId() << " threw error " << e.error() << '\n';
+		std::cerr << e.argId() << " threw error " << e.error() << endl;
 	}
 	
 	return givenOptions;
