@@ -1,28 +1,12 @@
 // SoloGen.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
-#include <iostream>
-#include <cstdlib>
-#include <time.h>
-#include <string>
-#include <vector>
-#include <math.h>
-#include <map>
-#include <stdlib.h>
-#include <stdio.h>
 #include <AudioFile/AudioFile.h>
 #include "tabGen.h"
 #include "cmdParse.h"
+#include "guitarConsts.h"
 
 using namespace std;
-
-const double SEMITONE_STEP = pow(2.0, 1.0/12);
-
-const double LOW_E_FREQ = 82.4;
-
-const int STRING_STEPS[5] = {5, 5, 5, 4, 5};
-
-const int N_FRETS = 24;
 
 const double SAMPLE_RATE = 44100.0;
 

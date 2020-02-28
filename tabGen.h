@@ -1,3 +1,6 @@
+#ifndef TAB_GEN_H
+#define TAB_GEN_H
+
 #include <vector>
 #include <cmath>
 
@@ -10,3 +13,5 @@ int randNoteLength();
 vector<int*> genRandNotes(int numBeats);
 vector<int*> genRandNotesPos(int numBeats);
 int* convPosToNote(int pos);
+
+#endif

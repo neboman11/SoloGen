@@ -1,3 +1,6 @@
+#ifndef CMD_PARSE_H
+#define CMD_PARSE_H
+
 #include <tclap/CmdLine.h>
 #include <map>
 #include <string>
@@ -25,3 +28,5 @@ const string TIME_SIGNATURES[7] = {
 };
 
 map<int, string> parseCMD(int argc, char** argv);
+
+#endif
