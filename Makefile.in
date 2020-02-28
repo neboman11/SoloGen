@@ -29,13 +29,13 @@ LDFLAGS =
 
 
 # Project name.  This is used in building the file name for the backup target
-PROJECTNAME = CS3377-HW3
+PROJECTNAME = SoloGen
 
 
 # Enter the names of the C++ source files that you want to compile
 # with this project
 
-SRCS = main.cpp
+SRCS = SoloGen.cpp cmdParse.cpp tabGen.cpp
 
 # Enter the name for the executable to be created
 EXEC = SoloGen
