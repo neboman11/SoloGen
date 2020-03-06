@@ -1,6 +1,3 @@
-// SoloGen.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
-
 #include <AudioFile/AudioFile.h>
 #include "tabGen.h"
 #include "cmdParse.h"
@@ -13,6 +10,8 @@ const double SAMPLE_RATE = 44100.0;
 const double SECONDS_PER_SAMPLE = 1 / SAMPLE_RATE;
 
 const int BUFFER_SIZE = 512;
+
+const string FLAC_COMMAND = "flac -s -f -o ";
 
 void convertWAVtoFLAC(string fileName);
 double noteToFreq(int* note);
@@ -57,16 +56,16 @@ void convertWAVtoFLAC(string fileName)
 	char* workingLine;
 
 	// Show the command being run
-	cout << "flac -f -o " + fileName.substr(0, fileName.length() - 3) + "flac " + fileName << endl;
+	cout << FLAC_COMMAND + fileName.substr(0, fileName.length() - 3) + "flac " + fileName << endl;
 
 	// Open the pipe with the given command in read mode
-	pipeTown = popen(("flac -f -o " + fileName.substr(0, fileName.length() - 3) + "flac " + fileName).c_str(), "r");
+	pipeTown = popen((FLAC_COMMAND + fileName.substr(0, fileName.length() - 3) + "flac " + fileName).c_str(), "r");
 
 	// If the pipe failed to open
 	if (!pipeTown)
 	{
 		// Let the user know
-		cerr << "Failed to run command: " << "flac -f -o " + fileName.substr(0, fileName.length() - 3) + "flac " + fileName << endl;
+		cerr << "Failed to run command: " << FLAC_COMMAND + fileName.substr(0, fileName.length() - 3) + "flac " + fileName << endl;
 		return;
 	}
 
