@@ -43,18 +43,6 @@ map<int, string> parseCMD(int argc, char** argv)
 
 		givenOptions[TEMPO] = to_string(tempo.getValue());
 
-		// Check if converting to flac if output file extension matches flac instead of wav
-		if (outFile.getValue().substr(outFile.getValue().length() - 4, outFile.getValue().length()) == ".wav")
-		{
-			givenOptions[OUTFILE] = outFile.getValue();
-		}
-
-		else
-		{
-			givenOptions[OUTFILE] = outFile.getValue() + ".wav";
-		}
-		
-
 		if (flacConvert.getValue())
 		{
 			givenOptions[FLAC] = "true";
@@ -64,6 +52,35 @@ map<int, string> parseCMD(int argc, char** argv)
 		{
 			givenOptions[FLAC] = "false";
 		}
+
+		// Check if converting to flac if output file extension matches flac instead of wav
+		if (givenOptions[FLAC] == "false")
+		{
+			if (outFile.getValue().substr(outFile.getValue().length() - 4, outFile.getValue().length()) == ".wav")
+			{
+				givenOptions[OUTFILE] = outFile.getValue();
+			}
+			
+			else
+			{
+				givenOptions[OUTFILE] = outFile.getValue() + ".wav";
+			}
+		}
+
+		else
+		{
+			if (outFile.getValue().substr(outFile.getValue().length() - 5, outFile.getValue().length()) == ".flac")
+			{
+				givenOptions[OUTFILE] = outFile.getValue();
+			}
+
+			else
+			{
+				givenOptions[OUTFILE] = outFile.getValue() + ".flac";
+			}
+			
+		}
+		
 
 		if (chromatic.getValue() && pentatonic.getValue() && pentatonic.isSet())
 		{

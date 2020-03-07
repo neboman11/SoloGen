@@ -56,16 +56,16 @@ void convertWAVtoFLAC(string fileName)
 	char* workingLine;
 
 	// Show the command being run
-	cout << FLAC_COMMAND + fileName.substr(0, fileName.length() - 3) + "flac " + fileName << endl;
+	cout << FLAC_COMMAND + fileName + " " + fileName + ".wav" << endl;
 
 	// Open the pipe with the given command in read mode
-	pipeTown = popen((FLAC_COMMAND + fileName.substr(0, fileName.length() - 3) + "flac " + fileName).c_str(), "r");
+	pipeTown = popen((FLAC_COMMAND + fileName + " " + fileName + ".wav").c_str(), "r");
 
 	// If the pipe failed to open
 	if (!pipeTown)
 	{
 		// Let the user know
-		cerr << "Failed to run command: " << FLAC_COMMAND + fileName.substr(0, fileName.length() - 3) + "flac " + fileName << endl;
+		cerr << "Failed to run command: " << FLAC_COMMAND + fileName + " " + fileName + ".wav" << endl;
 		return;
 	}
 
@@ -85,16 +85,16 @@ void convertWAVtoFLAC(string fileName)
 	pclose(pipeTown);
 
 	// Show the command being run
-	cout << "rm -f " + fileName << endl;
+	cout << "rm -f " + fileName + ".wav" << endl;
 
 	// Open the pipe with the given command in read mode
-	pipeTown = popen(("rm -f " + fileName).c_str(), "r");
+	pipeTown = popen(("rm -f " + fileName + ".wav").c_str(), "r");
 
 	// If the pipe failed to open
 	if (!pipeTown)
 	{
 		// Let the user know
-		cerr << "Failed to run command: " << "rm -f " + fileName << endl;
+		cerr << "Failed to run command: " << "rm -f " + fileName + ".wav" << endl;
 		return;
 	}
 
@@ -175,10 +175,19 @@ void createWAV(vector<int*> notes, map<int, string> givenOptions)
 
 	audioFile.setNumChannels(numChannels);
 
-	audioFile.setBitDepth(24);
+	audioFile.setBitDepth(16);
 	audioFile.setSampleRate(44100);
 
-	audioFile.save(givenOptions[OUTFILE]);
+	if (givenOptions[FLAC] == "true")
+	{
+		audioFile.save(givenOptions[OUTFILE] + ".wav");
+	}
+	
+	else
+	{
+		audioFile.save(givenOptions[OUTFILE]);
+	}
+	
 }
 
 void outputTabChrom(map<int, string> givenOptions)

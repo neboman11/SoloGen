@@ -52,7 +52,7 @@ OBJS = $(SRCS:.cpp=.o)
 all: $(EXEC)
 
 clean:
-	rm -f $(OBJS) *.d *~ $(EXEC)
+	rm -f $(OBJS) *.d *~ *.flac *.wav $(EXEC)
 
 
 # Pattern for .d files.
