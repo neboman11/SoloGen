@@ -19,7 +19,7 @@
 CXX = g++
 
 # C pre-processor flags
-CPPFLAGS = -I ~/include
+CPPFLAGS = 
 
 # compiler flags
 CXXFLAGS = -Werror -Wall -g
