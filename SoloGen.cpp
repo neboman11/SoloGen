@@ -132,8 +132,9 @@ void createWAV(vector<int*> notes, map<int, string> givenOptions)
 
 	AudioFile<double>::AudioBuffer buffer;
 
-	int wavLength = SAMPLE_RATE * stoi(givenOptions[LENGTH]);
-	int numBeats = stoi(givenOptions[LENGTH]) * stoi(givenOptions[TEMPO]) / 60;
+	int numBeats = stoi(givenOptions[LENGTH]) * stoi(givenOptions[TIME_SIG_UPPER]);
+	int wavLength = (int)(SAMPLE_RATE * numBeats * (60.0 / stoi(givenOptions[TEMPO])));
+	int noteLengthScale = 16 / stoi(givenOptions[TIME_SIG_LOWER]);
 
 	buffer.resize(2);
 
@@ -155,9 +156,9 @@ void createWAV(vector<int*> notes, map<int, string> givenOptions)
 			buffer[channel][i] = sample * 0.5;
 		}
 
-		if (i > (notes.at(currentNote)[2] * numSamplesPerBeat) + noteLength)
+		if (i > (((float)(notes.at(currentNote)[2]) / noteLengthScale) * numSamplesPerBeat) + noteLength)
 		{
-			noteLength += notes.at(currentNote)[2] * numSamplesPerBeat;
+			noteLength += ((float)(notes.at(currentNote)[2]) / noteLengthScale) * numSamplesPerBeat;
 			currentNote++;
 		}
 
@@ -195,7 +196,7 @@ void outputTabChrom(map<int, string> givenOptions)
 	vector<int*> notes;		// Vector of arrays of integers containing note info (pitch, length)
 	vector<string*> tab;	// Vector of arrays of strings containing each note per beat
 
-	int numBeats = stoi(givenOptions[LENGTH]) * stoi(givenOptions[TEMPO]) / 60;
+	int numBeats = stoi(givenOptions[LENGTH]) * stoi(givenOptions[TIME_SIG_UPPER]) * (16 / stoi(givenOptions[TIME_SIG_LOWER]));
 
 	// Generate random notes and place them into vector <notes>
 	notes = genRandNotes(numBeats);
@@ -243,7 +244,7 @@ void outputTabPenta(map<int, string> givenOptions)
 	vector<int*> notes;		// Vector of arrays of integers containing note info (pitch, length)
 	vector<string*> tab;	// Vector of arrays of strings containing each note per beat
 
-	int numBeats = stoi(givenOptions[LENGTH]) * stoi(givenOptions[TEMPO]) / 60;
+	int numBeats = stoi(givenOptions[LENGTH]) * stoi(givenOptions[TIME_SIG_UPPER]) * (16 / stoi(givenOptions[TIME_SIG_LOWER]));
 
 	// Generate random notes and place them into vector <notes>
 	notes = genRandNotesPos(numBeats);

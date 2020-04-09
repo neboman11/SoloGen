@@ -9,7 +9,7 @@ map<int, string> parseCMD(int argc, char** argv)
 	{
 		TCLAP::CmdLine cmd("SoloGen", ' ', "0.1");
 
-		TCLAP::ValueArg<int> length("l", "length", "The length of the solo to generate in seconds", true, 5, "time (s)");
+		TCLAP::ValueArg<int> length("l", "length", "The number of measures to generate a solo over", true, 5, "measures");
 
 		cmd.add(length);
 
@@ -112,7 +112,8 @@ map<int, string> parseCMD(int argc, char** argv)
 
 		if (validSig)
 		{
-			givenOptions[TIME_SIGNATURE] = timeSig.getValue();
+			givenOptions[TIME_SIG_UPPER] = timeSig.getValue().substr(0, 1);
+			givenOptions[TIME_SIG_LOWER] = timeSig.getValue().substr(2, 1);
 		}
 
 		else

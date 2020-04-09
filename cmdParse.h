@@ -14,7 +14,8 @@ enum CmdOptions {
 	FLAC,
 	CHROMATIC,
 	PENTATONIC,
-	TIME_SIGNATURE
+	TIME_SIG_UPPER,
+	TIME_SIG_LOWER
 };
 
 const string TIME_SIGNATURES[7] = {
