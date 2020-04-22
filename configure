@@ -2886,6 +2886,20 @@ fi
 
 done
 
+for ac_header in AudioFile/AudioFile.h
+do :
+  ac_fn_cxx_check_header_mongrel "$LINENO" "AudioFile/AudioFile.h" "ac_cv_header_AudioFile_AudioFile_h" "$ac_includes_default"
+if test "x$ac_cv_header_AudioFile_AudioFile_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_AUDIOFILE_AUDIOFILE_H 1
+_ACEOF
+
+else
+  as_fn_error $? "AudioFile is required for this project." "$LINENO" 5
+fi
+
+done
+
 
 ac_config_files="$ac_config_files Makefile"
 

@@ -19,7 +19,7 @@
 CXX = g++
 
 # C pre-processor flags
-CPPFLAGS = 
+CPPFLAGS = -I /home/nesbitt/include
 
 # compiler flags
 CXXFLAGS = -Werror -Wall -g

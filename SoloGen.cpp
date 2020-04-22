@@ -7,8 +7,6 @@ using namespace std;
 
 const double SAMPLE_RATE = 44100.0;
 
-const double SECONDS_PER_SAMPLE = 1 / SAMPLE_RATE;
-
 const int BUFFER_SIZE = 512;
 
 const string FLAC_COMMAND = "flac -s -f -o ";
